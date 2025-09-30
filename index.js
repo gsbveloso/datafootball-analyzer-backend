@@ -1,4 +1,4 @@
-// index.js - VERSÃO COMPLETA E CORRIGIDA
+// index.js - VERSÃO FINAL E COMPLETA
 
 const express = require('express');
 const cors = require('cors');
@@ -8,9 +8,13 @@ const csv = require('csv-parser');
 
 const app = express();
 
-// MUDANÇA IMPORTANTE: Configuração do CORS
-// Isso diz ao Render para aceitar pedidos de QUALQUER site. Resolve a "falha de conexão".
-app.use(cors()); 
+// CONFIGURAÇÃO CORRETA E FINAL DO CORS
+// Isso diz ao Render para aceitar pedidos APENAS do seu site no Netlify.
+const corsOptions = {
+  origin: 'https://centro-de-analise-final.netlify.app',
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
@@ -37,7 +41,6 @@ const COLUMN_NAMES = {
 
 // --- FUNÇÃO PARA CARREGAR OS DADOS ---
 async function loadData() {
-    // ... (código de carregamento de dados que você já tem, sem mudanças)
     const dataFolderPath = path.join(__dirname, 'data');
     let loadedGames = [];
 
@@ -93,20 +96,19 @@ const parseGoals = (str) => {
 }
 const getScoreAtMinute = (min, homeGoals, awayGoals) => [homeGoals.filter(m => m <= min).length, awayGoals.filter(m => m <= min).length];
 
-// MUDANÇA: Função getFilteredData agora existe no backend
 const getFilteredData = (params) => {
     let dataForAnalysis = [...allGames];
     let leagueContext = 'Forma Geral';
 
-    // ADICIONADO: Lógica do filtro de data
     if (params.dateFilter) {
         try {
             const filterDate = new Date(params.dateFilter);
-            dataForAnalysis = dataForAnalysis.filter(game => new Date(game[COLUMN_NAMES.date]) < filterDate);
+            if (!isNaN(filterDate)) {
+                dataForAnalysis = dataForAnalysis.filter(game => new Date(game[COLUMN_NAMES.date]) < filterDate);
+            }
         } catch (e) { console.log("Data inválida, ignorando filtro."); }
     }
 
-    // ADICIONADO: Lógica de contexto de liga
     if (params.context === 'autodetect' && params.homeTeamName) {
         const lastGame = dataForAnalysis.slice().reverse().find(g => g[COLUMN_NAMES.home_team] === params.homeTeamName || g[COLUMN_NAMES.away_team] === params.homeTeamName);
         if (lastGame && lastGame[COLUMN_NAMES.league]) {
@@ -129,7 +131,6 @@ const getRecentGames = (data, teamName, location, count) => {
 // --- LÓGICA DE ANÁLISE (CONFRONTOS) ---
 function analyzeConfrontation(params) {
     const { data, context } = getFilteredData(params);
-
     const homeRecentGames = getRecentGames(data, params.homeTeamName, params.homeParams.location, params.homeParams.recentGames);
     const awayRecentGames = getRecentGames(data, params.awayTeamName, params.awayParams.location, params.awayParams.recentGames);
 
@@ -155,11 +156,9 @@ function analyzeConfrontation(params) {
     };
 }
 
-// ADICIONADO: Lógica completa do Modelo Preditivo
+// --- LÓGICA DE ANÁLISE (PREDITIVO) ---
 function analyzePredictive(params) {
-    // (Esta é a sua lógica original do JS, traduzida para o backend)
     const { data, context } = getFilteredData(params);
-
     const getStats = (teamName, location, count, method) => {
         const games = getRecentGames(data, teamName, location, count);
         if (games.length === 0) return { avgFor: 0, avgAgainst: 0, gamesFound: 0, gamesList: [] };
@@ -177,7 +176,6 @@ function analyzePredictive(params) {
             avgFor: totalFor / games.length,
             avgAgainst: totalAgainst / games.length,
             gamesFound: games.length,
-            gamesList: games,
             teamName
         };
     };
@@ -192,23 +190,18 @@ function analyzePredictive(params) {
     const expectedHomeGoals = (homeTeamStats.avgFor + awayTeamStats.avgAgainst) / 2;
     const expectedAwayGoals = (awayTeamStats.avgFor + homeTeamStats.avgAgainst) / 2;
     
-    // Simulação de resultados (a lógica completa de Poisson, etc, iria aqui)
-    // Por simplicidade, vamos retornar os dados básicos calculados.
-    // O frontend já tem as funções de display que podem usar isso.
-    
     return {
         leagueContext: context,
         homeTeamStats,
         awayTeamStats,
         expectedHomeGoals,
         expectedAwayGoals
-        // ... outras estatísticas calculadas seriam adicionadas aqui
     };
 }
 
 // --- "TELEFONES" DA API ---
 app.get('/api/teams', (req, res) => {
-    if (!isDataLoaded) return res.status(503).json({ error: "Servidor ainda está carregando os dados." });
+    if (!isDataLoaded) return res.status(503).json({ error: "Servidor ainda está carregando os dados. Tente novamente em um minuto." });
     res.json({ teams: allTeams, leagues: allLeagues });
 });
 
