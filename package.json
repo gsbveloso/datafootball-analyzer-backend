@@ -1,7 +1,7 @@
 {
   "name": "datafootball-analyzer-backend",
-  "version": "3.0.0",
-  "description": "Servidor intermediário seguro para a API datafootball.com.br.",
+  "version": "4.0.0",
+  "description": "Servidor final para a ferramenta de análise.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
