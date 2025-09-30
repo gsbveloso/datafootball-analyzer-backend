@@ -67,7 +67,7 @@ async function fetchLatestGamesForLeague(leagueId) {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     
-    // *** A CORREÇÃO ESTÁ AQUI ***
+    // *** ESTA É A CORREÇÃO CRÍTICA ***
     const gamesData = response.data && response.data.data ? response.data.data : [];
     
     const recentGames = gamesData.filter(game => 
@@ -108,7 +108,9 @@ async function runUpdateCycle() {
       try {
         const statsResponse = await axiosInstance.get(`/matches/${game.id}`);
         const fullGameData = statsResponse.data.data;
-        await saveGameToDB(fullGameData);
+        if (fullGameData) { // Verificação extra de segurança
+          await saveGameToDB(fullGameData);
+        }
       } catch (error) {
          console.error(`Error fetching stats for game ${game.id}:`, error.response ? error.response.data : error.message);
       }
@@ -123,38 +125,11 @@ app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'DataFootball Analyzer Backend is running.' });
 });
 
-app.get('/test-db', async (req, res) => {
-    try {
-        const client = await pool.connect();
-        res.json({ status: 'success', message: 'Database connection successful.' });
-        client.release();
-    } catch (error) {
-        res.status(500).json({ status: 'error', message: 'Database connection failed.', error: error.message });
-    }
-});
-
 app.get('/leagues', async (req, res) => {
     try {
         const client = await pool.connect();
         const result = await client.query('SELECT DISTINCT league_id, data->>\'league_name\' as league_name FROM games ORDER BY league_name ASC');
         res.json(result.rows);
-        client.release();
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/teams', async (req, res) => {
-    const { league_id } = req.query;
-    try {
-        const client = await pool.connect();
-        const result = await client.query(
-            `SELECT DISTINCT team_name FROM (
-                SELECT data->>'home_name' as team_name FROM games WHERE league_id = $1
-                UNION
-                SELECT data->>'away_name' as team_name FROM games WHERE league_id = $1
-            ) as teams ORDER BY team_name ASC;`, [league_id]);
-        res.json(result.rows.map(r => r.team_name));
         client.release();
     } catch (error) {
         res.status(500).json({ error: error.message });
