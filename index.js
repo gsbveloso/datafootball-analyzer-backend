@@ -11,7 +11,6 @@ const PORT = process.env.PORT || 10000;
 const { Pool } = pg;
 
 // --- CONFIGURAÇÕES DE CONEXÃO ---
-// Render usa DATABASE_URL. Em ambiente local, usaria as variáveis separadas.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -29,16 +28,15 @@ const axiosInstance = axios.create({
   }
 });
 
-// Ligas que queremos monitorar. Adicione ou remova IDs conforme necessário.
-const TARGET_LEAGUE_IDS = [1, 2, 10, 13, 14, 15]; // Ex: Brasileirão A, B, Premier League, etc.
+// Ligas que queremos monitorar.
+const TARGET_LEAGUE_IDS = [1, 2, 10, 13, 14, 15];
 
 // --- MIDDLEWARE ---
-app.use(cors()); // Permite que qualquer site (como o seu no Netlify) acesse nosso servidor
+app.use(cors());
 app.use(express.json());
 
 // --- FUNÇÕES DO ROBÔ ---
 
-// Função para criar a tabela de jogos se ela não existir
 async function setupDatabase() {
   const client = await pool.connect();
   try {
@@ -59,15 +57,12 @@ async function setupDatabase() {
   }
 }
 
-// Função para buscar os jogos mais recentes de uma liga na API
 async function fetchLatestGamesForLeague(leagueId) {
   try {
     console.log(`Fetching games for league ${leagueId}...`);
     const response = await axiosInstance.get('/matches', {
       params: { league_id: leagueId, status: 'complete' }
     });
-    // A API parece não ter um filtro de data, então pegamos os últimos 100 jogos completos
-    // e filtramos apenas os dos últimos 7 dias para sermos eficientes.
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     const recentGames = response.data.data.filter(game => 
@@ -81,7 +76,6 @@ async function fetchLatestGamesForLeague(leagueId) {
   }
 }
 
-// Função para salvar ou atualizar um jogo no nosso banco de dados
 async function saveGameToDB(game) {
   const client = await pool.connect();
   try {
@@ -100,13 +94,11 @@ async function saveGameToDB(game) {
   }
 }
 
-// A TAREFA PRINCIPAL DO ROBÔ: buscar e salvar dados de todas as ligas
 async function runUpdateCycle() {
   console.log('--- Starting new update cycle ---');
   for (const leagueId of TARGET_LEAGUE_IDS) {
     const games = await fetchLatestGamesForLeague(leagueId);
     for (const game of games) {
-      // Pedido extra para obter estatísticas detalhadas (como xG e minutos dos gols)
       try {
         const statsResponse = await axiosInstance.get(`/matches/${game.id}`);
         const fullGameData = statsResponse.data.data;
@@ -119,14 +111,12 @@ async function runUpdateCycle() {
   console.log('--- Update cycle finished ---');
 }
 
-// --- ROTAS DA API (Para a sua ferramenta se conectar) ---
+// --- ROTAS DA API ---
 
-// Rota de teste para ver se o servidor está vivo
 app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'DataFootball Analyzer Backend is running.' });
 });
 
-// Rota de teste de conexão com o banco de dados
 app.get('/test-db', async (req, res) => {
     try {
         const client = await pool.connect();
@@ -137,7 +127,6 @@ app.get('/test-db', async (req, res) => {
     }
 });
 
-// Rota para a ferramenta buscar as ligas
 app.get('/leagues', async (req, res) => {
     try {
         const client = await pool.connect();
@@ -149,7 +138,6 @@ app.get('/leagues', async (req, res) => {
     }
 });
 
-// Rota para a ferramenta buscar os times de uma liga
 app.get('/teams', async (req, res) => {
     const { league_id } = req.query;
     try {
@@ -168,11 +156,9 @@ app.get('/teams', async (req, res) => {
     }
 });
 
-// Rota para a ferramenta buscar todos os jogos
 app.get('/games', async (req, res) => {
     try {
         const client = await pool.connect();
-        // Ordena por data para a ferramenta sempre ter os jogos na ordem certa
         const result = await client.query('SELECT data FROM games ORDER BY date_ts ASC');
         res.json(result.rows.map(r => r.data));
         client.release();
@@ -181,6 +167,16 @@ app.get('/games', async (req, res) => {
     }
 });
 
-
 // --- INICIALIZAÇÃO E AGENDAMENTO ---
 app.listen(PORT, async () => {
+  console.log(`Server listening on port ${PORT}`);
+  await setupDatabase(); 
+  
+  console.log('Running initial data fetch...');
+  runUpdateCycle();
+
+  cron.schedule('0 */2 * * *', () => {
+    console.log('Running scheduled data fetch...');
+    runUpdateCycle();
+  });
+});
