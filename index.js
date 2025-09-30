@@ -183,4 +183,4 @@ app.get('/games', async (req, res) => {
 
 
 // --- INICIALIZAÇÃO E AGENDAMENTO ---
-app.listen(PORT, async () 
+app.listen(PORT, async () => {
