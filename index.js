@@ -63,11 +63,17 @@ async function fetchLatestGamesForLeague(leagueId) {
     const response = await axiosInstance.get('/matches', {
       params: { league_id: leagueId, status: 'complete' }
     });
+    
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const recentGames = response.data.data.filter(game => 
+    
+    // *** A CORREÇÃO ESTÁ AQUI ***
+    const gamesData = response.data && response.data.data ? response.data.data : [];
+    
+    const recentGames = gamesData.filter(game => 
       new Date(game.date).getTime() > oneWeekAgo.getTime()
     );
+    
     console.log(`Found ${recentGames.length} recent games for league ${leagueId}.`);
     return recentGames;
   } catch (error) {
