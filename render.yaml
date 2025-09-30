@@ -1,7 +1,9 @@
 services:
+  # Robô (Web Service)
   - type: web
     name: datafootball-analyzer-backend
     env: node
+    region: oregon 
     plan: free
     buildCommand: 'npm install'
     startCommand: 'node index.js'
@@ -13,8 +15,11 @@ services:
           property: connectionString
       - key: API_KEY
         sync: false
-  - type: postgres
+
+  # Banco de Dados (Postgres Database)
+  - type: pdb 
     name: datafootball-db
+    region: oregon
     plan: free
     databaseName: datafootball_db
     user: datafootball_user
