@@ -1,14 +1,14 @@
 {
   "name": "datafootball-analyzer-backend",
-  "version": "1.0.0",
-  "description": "Backend para análise de dados de futebol.",
+  "version": "3.0.0",
+  "description": "Servidor intermediário seguro para a API datafootball.com.br.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
+    "axios": "^1.7.2",
     "cors": "^2.8.5",
-    "csv-parser": "^3.0.0",
-    "express": "^4.18.2"
+    "express": "^4.19.2"
   }
 }
