@@ -142,13 +142,12 @@ app.get('/teams', async (req, res) => {
     const { league_id } = req.query;
     try {
         const client = await pool.connect();
-        const result = await client.query(`
-            SELECT DISTINCT team_name FROM (
+        const result = await client.query(
+            `SELECT DISTINCT team_name FROM (
                 SELECT data->>'home_name' as team_name FROM games WHERE league_id = $1
                 UNION
                 SELECT data->>'away_name' as team_name FROM games WHERE league_id = $1
-            ) as teams ORDER BY team_name ASC;
-        `, [league_id]);
+            ) as teams ORDER BY team_name ASC;`, [league_id]);
         res.json(result.rows.map(r => r.team_name));
         client.release();
     } catch (error) {
