@@ -1,0 +1,14 @@
+{
+  "name": "datafootball-analyzer-backend",
+  "version": "1.0.0",
+  "description": "Backend para análise de dados de futebol.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "csv-parser": "^3.0.0",
+    "express": "^4.18.2"
+  }
+}
